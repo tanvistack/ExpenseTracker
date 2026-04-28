@@ -38,7 +38,7 @@ if "user" not in st.session_state:
 st.set_page_config(page_title="Expensify", layout="wide")
 
 if st.session_state.user is None:
-    st.title("🔐 Expensify Login")
+    st.title("Expensify Login")
 
     menu = ["Login", "Signup"]
     choice = st.sidebar.selectbox("Menu", menu)
