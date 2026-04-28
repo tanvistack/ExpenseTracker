@@ -1,6 +1,10 @@
 import streamlit as st
+import pandas as pd
+from datetime import datetime
+import plotly.express as px
 from pymongo import MongoClient
-
+import uuid
+import os
 # ================= MongoDB Setup =================
 
 # Try Streamlit secrets first (for deployment)
