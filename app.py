@@ -1,16 +1,22 @@
 import streamlit as st
-import pandas as pd
-from datetime import datetime
-import plotly.express as px
 from pymongo import MongoClient
-import uuid
-from dotenv import load_dotenv
-import os
 
 # ================= MongoDB Setup =================
-load_dotenv()  # load .env file
 
-mongo_uri = st.secrets["MONGO_URI"] if "MONGO_URI" in st.secrets else os.getenv("MONGO_URI") # get URI from .env
+# Try Streamlit secrets first (for deployment)
+if "MONGO_URI" in st.secrets:
+    mongo_uri = st.secrets["MONGO_URI"]
+else:
+    # fallback only for local development
+    from dotenv import load_dotenv
+    import os
+    load_dotenv()
+    mongo_uri = os.getenv("MONGO_URI")
+
+# Safety check
+if not mongo_uri:
+    st.error("MongoDB URI not found. Please check your secrets or .env file.")
+    st.stop()
 
 client = MongoClient(mongo_uri)
 db = client["expensify_db"]
