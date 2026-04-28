@@ -10,7 +10,7 @@ import os
 # ================= MongoDB Setup =================
 load_dotenv()  # load .env file
 
-mongo_uri = os.getenv("MONGO_URI")  # get URI from .env
+mongo_uri = st.secrets["MONGO_URI"] if "MONGO_URI" in st.secrets else os.getenv("MONGO_URI") # get URI from .env
 
 client = MongoClient(mongo_uri)
 db = client["expensify_db"]
