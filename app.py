@@ -5,19 +5,15 @@ import plotly.express as px
 from pymongo import MongoClient
 import uuid
 import os
-# ================= MongoDB Setup =================
 
-# Try Streamlit secrets first (for deployment)
 if "MONGO_URI" in st.secrets:
     mongo_uri = st.secrets["MONGO_URI"]
 else:
-    # fallback only for local development
     from dotenv import load_dotenv
     import os
     load_dotenv()
     mongo_uri = os.getenv("MONGO_URI")
 
-# Safety check
 if not mongo_uri:
     st.error("MongoDB URI not found. Please check your secrets or .env file.")
     st.stop()
@@ -26,7 +22,6 @@ client = MongoClient(mongo_uri)
 db = client["expensify_db"]
 collection = db["expenses"]
 
-# ================= Category =================
 CATEGORY_MAP = {
     " Food": "Food",
     " Transport": "Transport",
@@ -44,7 +39,6 @@ CATEGORY_LIST = list(CATEGORY_MAP.keys())
 
 st.set_page_config(page_title="Expensify", layout="wide")
 
-# ================= Load Data =================
 def load_expense_data():
     data = list(collection.find())
     
@@ -59,17 +53,14 @@ def load_expense_data():
 
     return df
 
-# ================= Insert =================
 def insert_expense(entry):
     collection.insert_one(entry)
 
-# ================= Delete =================
 def delete_expense(expense_id):
     collection.delete_one({"_id": expense_id})
 
 expense_df = load_expense_data()
 
-# ================= Sidebar =================
 with st.sidebar:
     st.title("EXPENSIFY")
     st.divider()
@@ -79,14 +70,12 @@ with st.sidebar:
         ["All Categories"] + CATEGORY_LIST
     )
 
-# ================= Filter =================
 filtered_df = expense_df.copy()
 
 if selected_category != "All Categories":
     clean_category = CATEGORY_MAP[selected_category]
     filtered_df = filtered_df[filtered_df["Category"] == clean_category]
 
-# ================= Dashboard =================
 st.header("Financial Dashboard")
 
 total_expenses = filtered_df["Amount"].sum() if not filtered_df.empty else 0.0
@@ -99,10 +88,8 @@ c1.metric("Total Outflow", f"₹ {total_expenses:,.0f}")
 c2.metric("Average Spend", f"₹ {avg_expense:,.0f}")
 c3.metric("Transactions", count_expense)
 
-# ================= Tabs =================
 tab1, tab2, tab3 = st.tabs(["Analytics", "Ledger", "Add Expense"])
 
-# ================= Analytics =================
 with tab1:
     if not filtered_df.empty:
         col1, col2 = st.columns(2)
@@ -121,7 +108,6 @@ with tab1:
     else:
         st.warning("No data available")
 
-# ================= Ledger =================
 with tab2:
     st.subheader("Transaction History")
 
@@ -143,7 +129,6 @@ with tab2:
                     st.success("Deleted successfully")
                     st.rerun()
 
-# ================= Add Expense =================
 with tab3:
     st.subheader("Log Transaction")
 
