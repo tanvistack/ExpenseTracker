@@ -6,81 +6,22 @@ from pymongo import MongoClient
 import uuid
 import os
 
-# ------------------ DB CONNECTION ------------------
 if "MONGO_URI" in st.secrets:
     mongo_uri = st.secrets["MONGO_URI"]
 else:
     from dotenv import load_dotenv
+    import os
     load_dotenv()
     mongo_uri = os.getenv("MONGO_URI")
 
 if not mongo_uri:
-    st.error("MongoDB URI not found.")
+    st.error("MongoDB URI not found. Please check your secrets or .env file.")
     st.stop()
 
 client = MongoClient(mongo_uri)
 db = client["expensify_db"]
 collection = db["expenses"]
 
-# 🔥 USERS COLLECTION
-users_collection = db["users"]
-
-# ------------------ AUTH FUNCTIONS ------------------
-def create_user(username, password):
-    if users_collection.find_one({"username": username}):
-        return False
-    users_collection.insert_one({"username": username, "password": password})
-    return True
-
-def login_user(username, password):
-    return users_collection.find_one({"username": username, "password": password})
-
-# ------------------ SESSION ------------------
-if "user" not in st.session_state:
-    st.session_state.user = None
-
-st.set_page_config(page_title="Expensify", layout="wide")
-
-# ------------------ LOGIN UI ------------------
-if st.session_state.user is None:
-    st.title("🔐 Expensify Login")
-
-    menu = ["Login", "Signup"]
-    choice = st.sidebar.selectbox("Menu", menu)
-
-    if choice == "Login":
-        username = st.text_input("Username")
-        password = st.text_input("Password", type="password")
-
-        if st.button("Login"):
-            user = login_user(username, password)
-            if user:
-                st.session_state.user = username
-                st.success("Login successful")
-                st.rerun()
-            else:
-                st.error("Invalid credentials")
-
-    elif choice == "Signup":
-        username = st.text_input("Create Username")
-        password = st.text_input("Create Password", type="password")
-
-        if st.button("Signup"):
-            if create_user(username, password):
-                st.success("Account created")
-            else:
-                st.error("User already exists")
-
-    st.stop()
-
-# ------------------ LOGOUT ------------------
-with st.sidebar:
-    st.write(f"Welcome, {st.session_state.user}")
-    if st.button("Logout"):
-        st.session_state.user = None
-        st.rerun()
-
-# ------------------ CATEGORY ------------------
 CATEGORY_MAP = {
     " Food": "Food",
     " Transport": "Transport",
@@ -96,7 +37,8 @@ CATEGORY_MAP = {
 }
 CATEGORY_LIST = list(CATEGORY_MAP.keys())
 
-# ------------------ FUNCTIONS ------------------
+st.set_page_config(page_title="Expensify", layout="wide")
+
 def load_expense_data():
     data = list(collection.find())
     
@@ -104,6 +46,7 @@ def load_expense_data():
         return pd.DataFrame(columns=["_id","Date","Category","Description","Amount"])
 
     df = pd.DataFrame(data)
+
     df["Date"] = pd.to_datetime(df["Date"]).dt.date
     df["Category"] = df["Category"].astype(str).str.strip().str.title()
     df["Amount"] = pd.to_numeric(df["Amount"], errors="coerce").fillna(0)
@@ -116,7 +59,6 @@ def insert_expense(entry):
 def delete_expense(expense_id):
     collection.delete_one({"_id": expense_id})
 
-# ------------------ LOAD DATA ------------------
 expense_df = load_expense_data()
 
 with st.sidebar:
@@ -128,14 +70,12 @@ with st.sidebar:
         ["All Categories"] + CATEGORY_LIST
     )
 
-# ------------------ FILTER ------------------
 filtered_df = expense_df.copy()
 
 if selected_category != "All Categories":
     clean_category = CATEGORY_MAP[selected_category]
     filtered_df = filtered_df[filtered_df["Category"] == clean_category]
 
-# ------------------ DASHBOARD ------------------
 st.header("Financial Dashboard")
 
 total_expenses = filtered_df["Amount"].sum() if not filtered_df.empty else 0.0
@@ -150,24 +90,24 @@ c3.metric("Transactions", count_expense)
 
 tab1, tab2, tab3 = st.tabs(["Analytics", "Ledger", "Add Expense"])
 
-# ------------------ ANALYTICS ------------------
 with tab1:
     if not filtered_df.empty:
         col1, col2 = st.columns(2)
 
         with col1:
             category_summary = filtered_df.groupby("Category")["Amount"].sum().reset_index()
+
             fig = px.pie(category_summary, values="Amount", names="Category", hole=0.5)
             st.plotly_chart(fig, use_container_width=True)
 
         with col2:
             time_summary = filtered_df.groupby("Date")["Amount"].sum().reset_index()
+
             fig = px.line(time_summary, x="Date", y="Amount", markers=True)
             st.plotly_chart(fig, use_container_width=True)
     else:
         st.warning("No data available")
 
-# ------------------ LEDGER ------------------
 with tab2:
     st.subheader("Transaction History")
 
@@ -189,7 +129,6 @@ with tab2:
                     st.success("Deleted successfully")
                     st.rerun()
 
-# ------------------ ADD EXPENSE ------------------
 with tab3:
     st.subheader("Log Transaction")
 
@@ -208,7 +147,7 @@ with tab3:
         if submitted:
             if description and amount_value > 0:
                 new_entry = {
-                    "_id": str(uuid.uuid4()),
+                    "_id": str(uuid.uuid4()),  # unique id
                     "Date": str(date_value),
                     "Category": CATEGORY_MAP[category_value],
                     "Description": description,
