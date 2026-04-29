@@ -20,7 +20,6 @@ if not mongo_uri:
 client = MongoClient(mongo_uri)
 db = client["expensify_db"]
 collection = db["expenses"]
-
 users_collection = db["users"]
 
 def create_user(username, password):
@@ -90,7 +89,9 @@ CATEGORY_MAP = {
 CATEGORY_LIST = list(CATEGORY_MAP.keys())
 
 def load_expense_data():
-    data = list(collection.find())
+    data = list(collection.find({
+        "username": st.session_state.user
+    }))
     
     if not data:
         return pd.DataFrame(columns=["_id","Date","Category","Description","Amount"])
@@ -106,8 +107,11 @@ def insert_expense(entry):
     collection.insert_one(entry)
 
 def delete_expense(expense_id):
-    collection.delete_one({"_id": expense_id})
-
+    collection.delete_one({
+        "_id": expense_id,
+        "username": st.session_state.user
+    })
+    
 expense_df = load_expense_data()
 
 with st.sidebar:
@@ -195,6 +199,7 @@ with tab3:
             if description and amount_value > 0:
                 new_entry = {
                     "_id": str(uuid.uuid4()),
+                    "username": st.session_state.user,   
                     "Date": str(date_value),
                     "Category": CATEGORY_MAP[category_value],
                     "Description": description,
